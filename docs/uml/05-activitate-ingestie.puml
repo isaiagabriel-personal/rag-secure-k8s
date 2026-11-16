@@ -1,0 +1,77 @@
+@startuml 05-activitate-ingestie
+title Diagrama de activitate – ingestia unui document
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+|Editor (web)|
+start
+:Alege baza de cunoștințe
+și fișierul PDF;
+|api|
+:Verifică JWT și rolul
+(owner sau editor);
+if (are drept de încărcare?) then (nu)
+  :Răspuns 403;
+  stop
+else (da)
+endif
+:Calculează sha256;
+if (versiune identică există?) then (da)
+  :Răspuns 200 (duplicat);
+  stop
+else (nu)
+endif
+:Scrie fișierul în Blob
+kb/{kb_id}/{version_id}.pdf;
+:Creează document_version
+(stare uploaded);
+:Publică mesaj document.uploaded
+în coada ingest;
+:Răspuns 202 cu version_id;
+|worker-ocr|
+:Primește mesajul (peek-lock);
+if (versiunea e deja procesată?) then (da)
+  :Confirmă mesajul (idempotent);
+  stop
+else (nu)
+endif
+if (PDF-ul are text nativ?) then (da)
+  :Extrage textul cu pymupdf;
+  :Rulează detectorul de text ascuns
+  (culoare, font, poziție, zero-width, metadate);
+else (nu)
+  :OCR cu ocrmypdf / Tesseract (ron+eng);
+endif
+:Scrie pages (cu suspicious);
+if (pagini suspecte și QUARANTINE_MODE = block?) then (da)
+  :Stare quarantined;
+  :Confirmă mesajul;
+  |Proprietar (web)|
+  :Vede paginile suspecte
+  și motivele;
+  if (aprobă?) then (nu)
+    :Stare rejected;
+    stop
+  else (da)
+    |api|
+    :Publică document.approved
+    în coada index;
+  endif
+else (nu)
+  |worker-ocr|
+  :Stare ocr_done;
+  :Publică document.ocr_done
+  în coada index;
+  :Confirmă mesajul;
+endif
+|worker-index|
+:Primește mesajul;
+:Fragmentare (~500 tokeni, suprapunere 50);
+:Embeddings bge-m3 pentru fiecare fragment;
+:Scrie chunks (text, tsv, embedding, kb_id)
+și șterge fragmentele versiunii vechi,
+în aceeași tranzacție;
+:Stare ready;
+:Confirmă mesajul;
+stop
+@enduml

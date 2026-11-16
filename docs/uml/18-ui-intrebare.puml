@@ -1,0 +1,20 @@
+@startsalt 18-ui-intrebare
+title Interfața utilizator – chat cu surse
+{+
+  {* Baze de cunoștințe | Documente | <b>Întreabă | Audit }
+  Bazele interogate: | [X] Regulamente HR | [X] Contracte 2026 | [ ] Manuale tehnice
+  ..
+  {SI
+    <b>Tu:</b> Câte zile de concediu de odihnă are un angajat cu 3 ani vechime?
+    .
+    <b>Asistent:</b> Conform Regulamentului intern, art. 14, un angajat cu
+    vechime între 1 și 5 ani are 22 de zile lucrătoare de concediu [1].
+    Surse: [1] Regulament intern.pdf, pag. 7
+    .
+    .
+  }
+  ..
+  "Scrie întrebarea...                                        " | [ Trimite ]
+  <i>Răspunsurile sunt text; link-urile externe sunt eliminate.
+}
+@endsalt

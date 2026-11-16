@@ -1,0 +1,128 @@
+@startuml 12-clase-detaliata
+title Diagrama de clase detaliată – proiectarea serviciului api și a workerilor (Python)
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide circle
+left to right direction
+
+package "api (FastAPI)" {
+  class AuthService {
+    +register(email, parola) : User
+    +login(email, parola) : TokenPair
+    +refresh(refreshToken) : TokenPair
+    -hashParola(parola) : str
+  }
+  class KnowledgeBaseService {
+    +create(owner, nume) : KnowledgeBase
+    +addMember(kb, user, rol)
+    +removeMember(kb, user)
+    +assertRole(user, kb, rolMinim)
+  }
+  class DocumentService {
+    +upload(user, kb, fisier) : DocumentVersion
+    +approve(owner, versiune)
+    +reject(owner, versiune)
+    -publishIngest(versiune)
+  }
+  class AskService {
+    +ask(user, intrebare, kbIds, topK) : Answer
+    -retrieve(intrebare, kbIds) : list<Chunk>
+    -buildPrompt(intrebare, chunks) : Prompt
+  }
+  class RateLimiter {
+    +check(user) : bool
+    +consumeTokens(user, n)
+  }
+  class AuditLog {
+    +record(user, actiune, rezultat, detalii)
+  }
+}
+
+package "Apărări (interfețe și implementări)" {
+  interface InjectionGuard {
+    +score(text) : float
+  }
+  class DebertaGuard
+  class RulesGuard
+  DebertaGuard ..|> InjectionGuard
+  RulesGuard ..|> InjectionGuard
+  class OutputFilter {
+    +filter(raspuns, chunks, canary) : FilterResult
+    -stripExternalUrls(text)
+    -verifyCitations(text, chunks)
+    -containsCanary(text)
+  }
+  class HiddenTextDetector {
+    +analyze(pagina) : list<Motiv>
+  }
+}
+
+package "Furnizori (interfețe)" {
+  interface LLMProvider {
+    +chat(prompt, timeout) : str
+  }
+  interface EmbeddingProvider {
+    +embed(texte) : list<vector>
+  }
+  interface VectorStore {
+    +hybridSearch(embedding, intrebare, kbIds, topK) : list<Chunk>
+    +upsertChunks(versiune, chunks)
+  }
+  interface BlobStore {
+    +put(cale, bytes)
+    +get(cale) : bytes
+  }
+  interface Queue {
+    +send(coada, mesaj)
+    +receive(coada) : Mesaj
+    +complete(mesaj)
+  }
+  interface OcrProvider {
+    +extract(pdf) : list<Pagina>
+  }
+  class OllamaProvider
+  class VllmProvider
+  class BgeM3Embeddings
+  class PgvectorStore
+  class AzureBlobStore
+  class ServiceBusQueue
+  class TesseractOcr
+  OllamaProvider ..|> LLMProvider
+  VllmProvider ..|> LLMProvider
+  BgeM3Embeddings ..|> EmbeddingProvider
+  PgvectorStore ..|> VectorStore
+  AzureBlobStore ..|> BlobStore
+  ServiceBusQueue ..|> Queue
+  TesseractOcr ..|> OcrProvider
+}
+
+package "worker" {
+  class OcrWorker {
+    +handle(mesaj)
+  }
+  class IndexWorker {
+    +handle(mesaj)
+    -chunk(text) : list<str>
+  }
+}
+
+AskService --> InjectionGuard
+AskService --> OutputFilter
+AskService --> LLMProvider
+AskService --> EmbeddingProvider
+AskService --> VectorStore
+AskService --> RateLimiter
+AskService --> AuditLog
+AskService --> KnowledgeBaseService
+DocumentService --> BlobStore
+DocumentService --> Queue
+DocumentService --> KnowledgeBaseService
+OcrWorker --> OcrProvider
+OcrWorker --> HiddenTextDetector
+OcrWorker --> BlobStore
+OcrWorker --> Queue
+IndexWorker --> EmbeddingProvider
+IndexWorker --> VectorStore
+IndexWorker --> Queue
+@enduml

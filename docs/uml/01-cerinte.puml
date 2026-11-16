@@ -1,0 +1,43 @@
+@startuml 01-cerinte
+title Specificarea cerințelor – asistent documentar RAG securizat
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #333333
+}
+skinparam nodesep 20
+skinparam ranksep 30
+
+package "Cerințe funcționale" as RF {
+  rectangle "<<requirement>>\n**RF1 Autentificare**\nînregistrare și autentificare (JWT)" as RF1
+  rectangle "<<requirement>>\n**RF2 Baze de cunoștințe**\ncreare; membri cu roluri\nowner / editor / reader" as RF2
+  rectangle "<<requirement>>\n**RF3 Încărcare documente**\nPDF nativ sau scanat,\nversiuni, deduplicare" as RF3
+  rectangle "<<requirement>>\n**RF4 Procesare documente**\nOCR, detectare text ascuns,\ncarantină, indexare" as RF4
+  rectangle "<<requirement>>\n**RF5 Întrebări și răspunsuri**\nrăspuns în română, cu citarea sursei,\ndoar din bazele accesibile" as RF5
+  rectangle "<<requirement>>\n**RF6 Audit**\njurnal al accesului și\nal apărărilor declanșate" as RF6
+  RF1 -down-> RF2 : <<precede>>
+  RF2 -down-> RF3 : <<precede>>
+  RF3 -down-> RF4 : <<precede>>
+  RF4 -down-> RF5 : <<precede>>
+  RF5 -down-> RF6 : <<trace>>
+}
+
+package "Cerințe nefuncționale" as RNF {
+  rectangle "<<requirement>>\n**RNF1 Securitate**\ncontrol al accesului pe două bariere\n(API + RLS), prompt structurat,\nguard, filtru de ieșire" as RNF1
+  rectangle "<<requirement>>\n**RNF2 Confidențialitate**\nnicio dată nu părăsește clusterul;\nmodel și OCR open-source, self-hosted" as RNF2
+  rectangle "<<requirement>>\n**RNF3 Disponibilitate**\nrate limit per utilizator, timeout,\nreziliență la căderea unui pod" as RNF3
+  rectangle "<<requirement>>\n**RNF4 Operabilitate**\nKubernetes, infrastructură ca și cod,\nCI/CD cu scanări, metrici" as RNF4
+  rectangle "<<requirement>>\n**RNF5 Evaluabilitate**\nsuită de atacuri reproductibilă,\napărări activabile din configurare" as RNF5
+  RNF1 -[hidden]down-> RNF2
+  RNF2 -[hidden]down-> RNF3
+  RNF3 -[hidden]down-> RNF4
+  RNF4 -[hidden]down-> RNF5
+}
+
+RNF1 .left.> RF2 : <<refine>>
+RNF1 .left.> RF5 : <<refine>>
+RNF2 .left.> RF4 : <<refine>>
+RNF3 .left.> RF5 : <<refine>>
+RNF5 .up.> RNF1 : <<verify>>
+@enduml

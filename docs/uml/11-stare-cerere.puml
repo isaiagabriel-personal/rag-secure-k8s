@@ -1,0 +1,29 @@
+@startuml 11-stare-cerere
+title Diagrama de stare – o cerere /ask
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+[*] --> primita
+primita --> refuzata_acces : nu e membru\nîn toate bazele (403)
+primita --> limitata : peste limita de\ncereri sau tokeni (429)
+primita --> verificata_guard : autorizare OK
+verificata_guard --> blocata_guard : scor întrebare > prag
+verificata_guard --> in_cautare : scor OK
+in_cautare --> in_generare : fragmente găsite\n(cele suspecte excluse)
+in_generare --> in_filtrare : răspuns primit\nde la model
+in_generare --> esuata : timeout model
+in_filtrare --> blocata_iesire : URL extern / citare\ninventată / canary
+in_filtrare --> raspunsa : răspuns curat
+raspunsa --> [*]
+blocata_iesire --> [*]
+blocata_guard --> [*]
+refuzata_acces --> [*]
+limitata --> [*]
+esuata --> [*]
+
+raspunsa : audit(ok), mesaj salvat
+blocata_guard : audit(blocked_guard)
+blocata_iesire : audit(blocked_output)
+refuzata_acces : audit(denied)
+limitata : audit(rate_limited)
+@enduml

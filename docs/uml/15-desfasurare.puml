@@ -1,0 +1,63 @@
+@startuml 15-desfasurare
+title Diagrama de desfășurare – mediul de producție (AKS) și cel local (k3d)
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+node "Laptopul utilizatorului" as LAP {
+  artifact "Browser" as BR
+}
+
+cloud "Microsoft Azure (West Europe)" as AZ {
+  node "AKS – node pool system\n1–3 × Standard_D2s_v5" as NP1 {
+    node "pod web ×2" as PWEB
+    node "pod api ×2" as PAPI
+    node "pod worker-ocr ×0–10" as POCR
+    node "pod worker-index ×0–10" as PIDX
+    node "pod Traefik" as PING
+    node "pod kube-prometheus-stack" as PMON
+  }
+  node "AKS – node pool llm\n0–1 × NC4as_T4_v3 (GPU T4, spot)" as NP2 {
+    node "pod llm (vLLM)\nvolum persistent cu modelul" as PLLM
+  }
+  node "Load balancer + IP public" as LB
+  database "PostgreSQL Flexible Server B1ms\n(acces doar din rețeaua clusterului)" as PG
+  storage "Storage account\n(container documents, tfstate)" as BLOB
+  queue "Service Bus Basic" as SB
+  node "Key Vault" as KV
+  node "Managed Identity\n(Workload Identity, OIDC)" as MI
+}
+
+cloud "GitHub" as GH {
+  node "GitHub Actions" as GHA
+  node "ghcr.io" as REG
+}
+
+node "Laptop de dezvoltare (macOS)" as DEV {
+  node "k3d (k3s în Docker)" as K3D {
+    node "aceleași poduri,\nvalues-local.yaml" as PL
+    database "pgvector/pgvector" as PGL
+    node "Azurite + emulator Service Bus" as EMU
+  }
+  node "Ollama (Metal)" as OLL
+}
+
+BR --> LB : HTTPS
+LB --> PING
+PING --> PWEB
+PING --> PAPI
+PAPI --> PG
+PAPI --> BLOB
+PAPI --> SB
+PAPI --> PLLM
+POCR --> SB
+POCR --> BLOB
+POCR --> PG
+PIDX --> SB
+PIDX --> PG
+PAPI ..> KV : prin CSI
+MI ..> PAPI : identitate fără parolă
+GHA --> REG : build + push
+GHA ..> NP1 : helm upgrade (OIDC)
+REG ..> NP1 : pull imagini (digest)
+PL ..> OLL : LLM_URL
+@enduml

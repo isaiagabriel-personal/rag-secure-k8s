@@ -1,0 +1,24 @@
+@startsalt 17-ui-baze
+title Interfața utilizator – bazele de cunoștințe și documentele
+{+
+  {* Baze de cunoștințe | Documente | Întreabă | Audit }
+  {
+    {T
+      + Bază de cunoștințe   | Rolul meu | Documente | Suspecte
+      + Regulamente HR        | owner     | 42        | 1
+      + Contracte 2026        | editor    | 118       | 0
+      + Manuale tehnice       | reader    | 57        | 0
+    }
+    [ + Bază nouă ] | [ Membri ]
+  }
+  --
+  <b>Regulamente HR – documente
+  {T
+    + Document                 | Versiune | Stare        | Pagini suspecte
+    + Regulament intern.pdf    | 2        | ready        | 0
+    + Procedura concedii.pdf   | 1        | quarantined  | 2 (text alb, font 1 pt)
+    + Cod etic.pdf             | 1        | indexing     | 0
+  }
+  [ Încarcă PDF ] | [ Aprobă ] | [ Respinge ]
+}
+@endsalt

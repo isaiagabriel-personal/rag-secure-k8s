@@ -1,0 +1,28 @@
+@startuml 09-comunicare-ingestie
+title Diagrama de comunicare (colaborare) – încărcarea unui document
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam nodesep 40
+skinparam ranksep 50
+
+object ":Interfață web" as W
+object ":api" as A
+object ":PostgreSQL" as DB
+object ":Blob Storage" as B
+object ":Service Bus" as SB
+object ":worker-ocr" as O
+object ":HiddenTextDetector" as H
+object ":worker-index" as I
+
+W -right-> A : 1: POST /knowledge-bases/{id}/documents\n5: 202 {version_id}
+A -down-> DB : 2: verifică rolul;\ncreează document_version(uploaded)
+A -right-> B : 3: put(kb/{kb_id}/{version_id}.pdf)
+A -down-> SB : 4: send(ingest, document.uploaded)
+SB -right-> O : 6: receive(document.uploaded)
+O -up-> B : 7: get(pdf)
+O -right-> H : 8: analizează(pagini)\n9: pagini suspecte + motive
+O -down-> DB : 10: scrie pages;\nstare ocr_done / quarantined
+O -left-> SB : 11: send(index, document.ocr_done)
+SB -down-> I : 12: receive(document.ocr_done)
+I -left-> DB : 13: scrie chunks (embedding, tsv);\nstare ready
+@enduml

@@ -1,0 +1,11 @@
+@startsalt 16-ui-autentificare
+title Interfața utilizator – autentificare
+{+
+  <b>Asistent documentar – autentificare
+  ..
+  Email      | "gabriel@exemplu.ro      "
+  Parolă     | "************            "
+  ..
+  [  Intră  ] | [ Creează cont ]
+}
+@endsalt

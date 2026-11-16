@@ -1,0 +1,57 @@
+@startuml 06-activitate-intrebare
+title Diagrama de activitate – răspunsul la o întrebare (/ask)
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+|Cititor (web)|
+start
+:Alege bazele de cunoștințe
+și scrie întrebarea;
+|api|
+:Verifică JWT;
+if (membru în toate bazele cerute?) then (nu)
+  :403 + audit "denied";
+  stop
+else (da)
+endif
+if (peste limita de cereri / tokeni?) then (da)
+  :429 + audit "rate_limited";
+  stop
+else (nu)
+endif
+:Guard pe întrebare
+(clasificator de injecție);
+if (scor > prag?) then (da)
+  :Refuz politicos + audit "blocked_guard";
+  stop
+else (nu)
+endif
+:Embedding pentru întrebare;
+|PostgreSQL (RLS)|
+:SET LOCAL app.user_id;
+:Căutare full-text + kNN,
+filtrate pe kb_id;
+:RRF → top 8 fragmente;
+|api|
+:Guard pe fiecare fragment;
+:Exclude fragmentele peste prag
+(notate în audit);
+:Construiește promptul structurat
+(reguli + canary / date / întrebare);
+|llm|
+:Generează răspunsul;
+|api|
+:Filtru de ieșire:
+elimină imagini și URL-uri externe,
+verifică citările [n], caută canary-ul;
+if (răspunsul trece filtrul?) then (nu)
+  :Mesaj de refuz + audit "blocked_output";
+  stop
+else (da)
+endif
+:Salvează messages + audit "ok";
+|Cititor (web)|
+:Afișează răspunsul ca text,
+cu lista de surse;
+stop
+@enduml

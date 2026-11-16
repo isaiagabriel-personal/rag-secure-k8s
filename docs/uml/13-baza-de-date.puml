@@ -1,0 +1,134 @@
+@startuml 13-baza-de-date
+title Proiectarea bazei de date – PostgreSQL (pgvector, RLS)
+skinparam defaultFontName Arial
+skinparam shadowing false
+hide circle
+skinparam linetype ortho
+
+entity users {
+  *id : uuid <<PK>>
+  --
+  *email : text <<unique>>
+  *password_hash : text
+  *created_at : timestamptz
+}
+entity knowledge_bases {
+  *id : uuid <<PK>>
+  --
+  *name : text
+  description : text
+  *owner_id : uuid <<FK users>>
+  tags : text[]
+  *created_at : timestamptz
+  deleted_at : timestamptz
+}
+entity kb_members {
+  *kb_id : uuid <<PK,FK>>
+  *user_id : uuid <<PK,FK>>
+  --
+  *role : text (owner|editor|reader)
+}
+entity documents {
+  *id : uuid <<PK>>
+  --
+  *kb_id : uuid <<FK>>
+  *title : text
+  tags : text[]
+  current_version_id : uuid
+  *created_at : timestamptz
+}
+entity document_versions {
+  *id : uuid <<PK>>
+  --
+  *document_id : uuid <<FK>>
+  *blob_path : text
+  *sha256 : text
+  size_bytes : bigint
+  pages_count : int
+  *status : text
+  suspicious_pages : int
+  superseded_by : uuid
+  error : text
+  *created_at : timestamptz
+}
+entity pages {
+  *id : uuid <<PK>>
+  --
+  *version_id : uuid <<FK>>
+  *page_no : int
+  text : text
+  ocr_confidence : real
+  *suspicious : bool
+  suspicious_reasons : text[]
+}
+entity chunks {
+  *id : uuid <<PK>>
+  --
+  *version_id : uuid <<FK>>
+  *kb_id : uuid <<FK>> (RLS)
+  *page_no : int
+  *chunk_no : int
+  *text : text
+  tsv : tsvector <<GIN>>
+  embedding : vector(1024) <<HNSW>>
+  *suspicious : bool
+}
+entity jobs {
+  *id : uuid <<PK>>
+  --
+  *type : text
+  *version_id : uuid <<FK>>
+  *status : text
+  attempts : int
+  last_error : text
+}
+entity conversations {
+  *id : uuid <<PK>>
+  --
+  *user_id : uuid <<FK>>
+  kb_ids : uuid[]
+  *created_at : timestamptz
+}
+entity messages {
+  *id : uuid <<PK>>
+  --
+  *conversation_id : uuid <<FK>>
+  *question : text
+  answer : text
+  sources : jsonb
+  model : text
+  latency_ms : int
+  guard_scores : jsonb
+  filtered : bool
+}
+entity audit_log {
+  *id : bigint <<PK>>
+  --
+  *user_id : uuid <<FK>>
+  *action : text
+  kb_ids : uuid[]
+  chunk_ids : uuid[]
+  *outcome : text
+  details : jsonb
+  *created_at : timestamptz
+}
+
+users ||--o{ knowledge_bases : deține
+users ||--o{ kb_members
+knowledge_bases ||--o{ kb_members
+knowledge_bases ||--o{ documents
+documents ||--|{ document_versions
+document_versions ||--|{ pages
+document_versions ||--o{ chunks
+knowledge_bases ||--o{ chunks : kb_id (RLS)
+document_versions ||--o{ jobs
+users ||--o{ conversations
+conversations ||--|{ messages
+users ||--o{ audit_log
+
+note bottom of chunks
+  Politica RLS: un rând e vizibil rolului app_user doar dacă
+  kb_id IN (SELECT kb_id FROM kb_members
+            WHERE user_id = current_setting('app.user_id')::uuid)
+end note
+@enduml

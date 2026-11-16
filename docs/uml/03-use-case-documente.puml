@@ -1,0 +1,39 @@
+@startuml 03-use-case-documente
+title Caz de utilizare detaliat – încărcarea și procesarea unui document
+skinparam defaultFontName Arial
+skinparam shadowing false
+left to right direction
+
+actor "Editor" as Editor
+actor "Proprietar" as Owner
+actor "Worker OCR" as WOCR <<sistem>>
+actor "Worker indexare" as WIDX <<sistem>>
+
+rectangle "Asistent documentar RAG" {
+  usecase "Încărcare document" as UC4
+  usecase "Verificare rol în\nbaza de cunoștințe" as UC4a
+  usecase "Stocare fișier în Blob" as UC4b
+  usecase "Publicare mesaj\nîn coada ingest" as UC4c
+  usecase "Extragere text / OCR" as UC4d
+  usecase "Detectare text ascuns" as UC4e
+  usecase "Carantină document" as UC4f
+  usecase "Fragmentare și indexare" as UC4g
+  usecase "Aprobare / respingere\ndocument în carantină" as UC5
+}
+
+Editor --> UC4
+UC4 ..> UC4a : <<include>>
+UC4 ..> UC4b : <<include>>
+UC4 ..> UC4c : <<include>>
+WOCR --> UC4d
+UC4d ..> UC4e : <<include>>
+UC4f ..> UC4e : <<extend>>\n[pagini suspecte]
+WIDX --> UC4g
+Owner --> UC5
+UC5 ..> UC4g : <<include>>\n[aprobat]
+note bottom of UC4f
+  Condiția de extindere: detectorul a marcat
+  cel puțin o pagină ca suspectă și
+  QUARANTINE_MODE = block.
+end note
+@enduml

@@ -1,0 +1,85 @@
+@startuml 07-clase-analiza
+title Diagrama de clase – modelul de analiză (domeniul)
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide circle
+
+class Utilizator {
+  +id
+  +email
+  +parolaHash
+  +creatLa
+}
+class BazaDeCunostinte {
+  +id
+  +nume
+  +descriere
+  +taguri
+  +creatLa
+}
+class Apartenenta {
+  +rol : {owner, editor, reader}
+}
+class Document {
+  +id
+  +titlu
+  +taguri
+}
+class VersiuneDocument {
+  +id
+  +caleBlob
+  +sha256
+  +numarPagini
+  +stare
+  +paginiSuspecte
+}
+class Pagina {
+  +numar
+  +text
+  +incredereOCR
+  +suspecta
+  +motive
+}
+class Fragment {
+  +numar
+  +text
+  +tsv
+  +embedding[1024]
+  +suspect
+}
+class Conversatie {
+  +id
+  +creatLa
+}
+class Mesaj {
+  +intrebare
+  +raspuns
+  +surse
+  +model
+  +latentaMs
+  +scoruriGuard
+  +filtrat
+}
+class InregistrareAudit {
+  +actiune
+  +rezultat
+  +detalii
+  +creatLa
+}
+
+Utilizator "1" -- "0..*" Apartenenta
+BazaDeCunostinte "1" -- "0..*" Apartenenta
+Utilizator "1" -- "0..*" BazaDeCunostinte : deține >
+BazaDeCunostinte "1" *-- "0..*" Document
+Document "1" *-- "1..*" VersiuneDocument
+VersiuneDocument "1" *-- "1..*" Pagina
+VersiuneDocument "1" *-- "0..*" Fragment
+VersiuneDocument "0..1" --> "0..1" VersiuneDocument : înlocuită de >
+Utilizator "1" -- "0..*" Conversatie
+Conversatie "1" *-- "1..*" Mesaj
+Mesaj "0..*" -- "1..*" BazaDeCunostinte : interoghează >
+Mesaj "0..*" -- "0..*" Fragment : citează >
+Utilizator "1" -- "0..*" InregistrareAudit
+InregistrareAudit "0..*" -- "0..*" BazaDeCunostinte
+@enduml

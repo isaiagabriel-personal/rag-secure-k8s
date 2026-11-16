@@ -1,0 +1,61 @@
+@startuml 19-secventa-implementare-ingestie
+title Diagrama de secvență – implementarea ingestiei (apeluri reale între componente)
+skinparam defaultFontName Arial
+skinparam shadowing false
+autonumber
+
+actor "Editor" as U
+participant "web (React)" as W
+participant "api\nDocumentService" as A
+participant "KnowledgeBaseService" as K
+database "PostgreSQL" as DB
+participant "AzureBlobStore" as B
+participant "ServiceBusQueue" as Q
+participant "worker-ocr\nOcrWorker" as O
+participant "TesseractOcr /\npymupdf" as T
+participant "HiddenTextDetector" as H
+participant "worker-index\nIndexWorker" as I
+participant "BgeM3Embeddings" as E
+participant "PgvectorStore" as V
+
+U -> W : alege fișierul, apasă Încarcă
+W -> A : POST /knowledge-bases/{id}/documents (multipart, JWT)
+A -> K : assertRole(user, kb, editor)
+K -> DB : SELECT role FROM kb_members ...
+K --> A : OK
+A -> A : sha256(fișier)
+A -> DB : INSERT document_version (status=uploaded)
+A -> B : put("kb/{kb_id}/{version_id}.pdf", bytes)
+A -> Q : send("ingest", {type: document.uploaded, version_id, kb_id})
+A --> W : 202 {version_id}
+W --> U : "Document în procesare"
+Q -> O : receive("ingest") (peek-lock)
+O -> DB : SELECT status WHERE id=version_id
+alt status != uploaded
+  O -> Q : complete(mesaj)  (idempotent)
+else
+  O -> DB : UPDATE status=ocr_running
+  O -> B : get(blob_path)
+  O -> T : extract(pdf)  (text nativ sau OCR ron+eng)
+  T --> O : pagini
+  O -> H : analyze(pagina) pentru fiecare pagină
+  H --> O : motive (white_text, tiny_font, offpage, zero_width, metadata)
+  O -> DB : INSERT pages (text, suspicious, reasons)
+  alt pagini suspecte și QUARANTINE_MODE=block
+    O -> DB : UPDATE status=quarantined
+  else
+    O -> DB : UPDATE status=ocr_done
+    O -> Q : send("index", {type: document.ocr_done, version_id, kb_id})
+  end
+  O -> Q : complete(mesaj)
+end
+Q -> I : receive("index")
+I -> DB : SELECT pages WHERE version_id
+I -> I : chunk(text) ~500 tokeni, suprapunere 50
+I -> E : embed(chunks)
+E --> I : vectori (1024)
+I -> V : upsertChunks(version, chunks)  (tranzacție: insert + delete versiune veche)
+V -> DB : INSERT chunks ...; DELETE chunks WHERE version_id = veche
+I -> DB : UPDATE status=ready
+I -> Q : complete(mesaj)
+@enduml

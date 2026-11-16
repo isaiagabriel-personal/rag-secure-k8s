@@ -1,0 +1,24 @@
+@startuml 10-stare-document
+title Diagrama de stare – versiunea unui document
+skinparam defaultFontName Arial
+skinparam shadowing false
+
+[*] --> uploaded : POST documents\n(fișier în Blob, mesaj în ingest)
+uploaded --> ocr_running : worker-ocr preia mesajul
+ocr_running --> ocr_done : text extras,\nfără pagini suspecte
+ocr_running --> quarantined : pagini suspecte și\nQUARANTINE_MODE = block
+ocr_running --> failed : eroare după 3 livrări\n(dead-letter)
+quarantined --> ocr_done : owner aprobă\n(document.approved)
+quarantined --> rejected : owner respinge
+ocr_done --> indexing : worker-index preia mesajul
+indexing --> ready : chunks scrise,\nversiunea veche ștearsă
+indexing --> failed : eroare după 3 livrări
+ready --> superseded : re-upload\n(versiune nouă)
+superseded --> [*]
+rejected --> [*]
+failed --> [*] : ștergere / re-upload
+
+ready : fragmentele intră în căutare
+quarantined : nu intră în index
+superseded : fragmentele au fost șterse
+@enduml

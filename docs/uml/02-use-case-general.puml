@@ -1,0 +1,32 @@
+@startuml 02-use-case-general
+title Diagrama cazurilor de utilizare – vedere generală
+skinparam defaultFontName Arial
+skinparam shadowing false
+left to right direction
+
+actor "Cititor\n(reader)" as Reader
+actor "Editor" as Editor
+actor "Proprietar\n(owner)" as Owner
+Editor --|> Reader
+Owner --|> Editor
+
+rectangle "Asistent documentar RAG" {
+  usecase "Înregistrare / autentificare" as UC1
+  usecase "Creare bază de cunoștințe" as UC2
+  usecase "Gestionare membri și roluri" as UC3
+  usecase "Încărcare document" as UC4
+  usecase "Aprobare / respingere\ndocument în carantină" as UC5
+  usecase "Adresare întrebare" as UC6
+  usecase "Consultare istoric conversații" as UC7
+  usecase "Consultare jurnal de audit" as UC8
+}
+
+Reader --> UC1
+Reader --> UC6
+Reader --> UC7
+Editor --> UC4
+Owner --> UC2
+Owner --> UC3
+Owner --> UC5
+Owner --> UC8
+@enduml

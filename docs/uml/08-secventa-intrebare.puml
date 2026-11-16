@@ -1,0 +1,46 @@
+@startuml 08-secventa-intrebare
+title Diagrama de secvență – adresarea unei întrebări (nivel de analiză)
+skinparam defaultFontName Arial
+skinparam shadowing false
+autonumber
+
+actor "Cititor" as U
+participant "Interfață web" as W
+participant "api" as A
+participant "InjectionGuard" as G
+database "PostgreSQL\n(RLS)" as DB
+participant "llm" as L
+participant "OutputFilter" as F
+
+U -> W : scrie întrebarea, alege bazele
+W -> A : POST /ask {question, kb_ids}
+A -> A : verifică JWT, rolurile, limita de cereri
+alt nu e membru / peste limită
+  A --> W : 403 / 429
+  W --> U : mesaj de eroare
+end
+A -> G : clasifică(întrebare)
+G --> A : scor
+alt scor > prag
+  A -> DB : audit(blocked_guard)
+  A --> W : refuz politicos
+end
+A -> DB : SET LOCAL app.user_id; căutare full-text + kNN (kb_ids)
+DB --> A : top 8 fragmente
+loop pentru fiecare fragment
+  A -> G : clasifică(fragment)
+  G --> A : scor (exclude dacă > prag)
+end
+A -> L : chat(prompt structurat: reguli + canary, date, întrebare)
+L --> A : răspuns brut
+A -> F : filtrează(răspuns, fragmente)
+F --> A : răspuns curat sau respins
+alt respins
+  A -> DB : audit(blocked_output)
+  A --> W : mesaj de refuz
+else acceptat
+  A -> DB : salvează mesajul; audit(ok)
+  A --> W : {answer, sources}
+  W --> U : afișează răspunsul (text) și sursele
+end
+@enduml

@@ -1,0 +1,64 @@
+@startuml 14-componente
+title Diagrama de componente – asistentul documentar în Kubernetes
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam componentStyle rectangle
+
+actor "Utilizator" as U
+
+package "Cluster Kubernetes (namespace rag)" {
+  [Traefik\n(Gateway API, TLS,\ncert-manager)] as ING
+  [web\nReact, servit de nginx] as WEB
+  [api\nFastAPI\n+ InjectionGuard + OutputFilter] as API
+  [worker-ocr\npymupdf, ocrmypdf,\nHiddenTextDetector] as OCR
+  [worker-index\nbge-m3] as IDX
+  [llm\nOllama / vLLM\n(node pool GPU)] as LLM
+  [KEDA] as KEDA
+  [Prometheus + Grafana] as MON
+  [Secrets Store CSI\n(Key Vault)] as CSI
+}
+
+package "Servicii gestionate (Azure)" {
+  database "PostgreSQL Flexible Server\npgvector, RLS" as PG
+  storage "Blob Storage\n(documente)" as BLOB
+  queue "Service Bus\ningest / index / maintenance" as SB
+  [Key Vault] as KV
+}
+
+package "Livrare" {
+  [GitHub Actions\nCI: Trivy, gitleaks\nCD: Helm] as GHA
+  [ghcr.io\n(imagini după digest)] as REG
+}
+
+U --> ING : HTTPS
+ING --> WEB : /
+ING --> API : /api/v1
+WEB ..> API : fetch (JSON)
+API --> PG : SQL (rol app_user)
+API --> BLOB : put / get
+API --> SB : send
+API --> LLM : /v1/chat/completions
+SB --> OCR : ingest
+SB --> IDX : index
+OCR --> BLOB : get
+OCR --> PG : pages (rol app_worker)
+IDX --> PG : chunks (rol app_worker)
+KEDA ..> SB : citește lungimea cozilor
+KEDA ..> OCR : scalează 0–10
+KEDA ..> IDX : scalează 0–10
+CSI --> KV : citește secretele
+CSI ..> API : montează secretele
+MON ..> API : /metrics
+MON ..> OCR : /metrics
+MON ..> IDX : /metrics
+GHA --> REG : push imagini
+GHA ..> API : helm upgrade (OIDC)
+REG ..> API : pull
+
+note bottom of API
+  NetworkPolicy default-deny:
+  doar Traefik → api, web; api → PG, BLOB, SB, LLM;
+  workeri → PG, BLOB, SB; web → nimic;
+  egress spre internet blocat pentru api, workeri, llm.
+end note
+@enduml

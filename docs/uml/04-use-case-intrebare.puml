@@ -1,0 +1,37 @@
+@startuml 04-use-case-intrebare
+title Caz de utilizare detaliat – adresarea unei întrebări
+skinparam defaultFontName Arial
+skinparam shadowing false
+left to right direction
+
+actor "Cititor" as Reader
+actor "Serviciu de model (LLM)" as LLM <<sistem>>
+
+rectangle "Asistent documentar RAG" {
+  usecase "Adresare întrebare" as UC6
+  usecase "Autorizare pe bazele\nde cunoștințe cerute" as UC6a
+  usecase "Verificare limită de cereri" as UC6b
+  usecase "Verificare întrebare\ncu clasificatorul de injecție" as UC6c
+  usecase "Căutare hibridă\nfiltrată pe kb_id, sub RLS" as UC6d
+  usecase "Verificare fragmente\ncu clasificatorul de injecție" as UC6e
+  usecase "Generare răspuns\ncu prompt structurat" as UC6f
+  usecase "Filtrare răspuns\n(URL-uri, citări, canary)" as UC6g
+  usecase "Refuz politicos" as UC6h
+  usecase "Răspuns 429\n(prea multe cereri)" as UC6i
+  usecase "Înregistrare în audit" as UC6j
+}
+
+Reader --> UC6
+UC6 ..> UC6a : <<include>>
+UC6 ..> UC6b : <<include>>
+UC6 ..> UC6c : <<include>>
+UC6 ..> UC6d : <<include>>
+UC6 ..> UC6e : <<include>>
+UC6 ..> UC6f : <<include>>
+UC6 ..> UC6g : <<include>>
+UC6 ..> UC6j : <<include>>
+UC6h ..> UC6c : <<extend>>\n[scor peste prag]
+UC6h ..> UC6g : <<extend>>\n[răspuns respins]
+UC6i ..> UC6b : <<extend>>\n[limită depășită]
+UC6f --> LLM
+@enduml
