@@ -54,3 +54,27 @@ jobs:
 
       - name: Teste
         run: uv run pytest
+  # Caută parole, chei și tokenuri în tot istoricul repo-ului. Rulează în
+  # paralel cu jobul api. Aceeași verificare există și la commit, pe laptop,
+  # dar acolo poate fi ocolită; aici nu.
+  gitleaks:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Descarca repo-ul cu tot istoricul
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # 0 = toate commit-urile, nu doar ultimul. Un secret șters din
+          # fișiere rămâne în istoric și trebuie găsit și acolo.
+          fetch-depth: 0
+
+      # Rulează gitleaks din imaginea oficială (v8.30.0), cerută după digest:
+      # amprenta conținutului imaginii, care nu poate fi mutată pe altă imagine,
+      # spre deosebire de un tag.
+      #   -v "$PWD:/repo:ro"  repo-ul de pe runner, vizibil în container, doar pentru citire
+      #   git /repo           scanează istoricul git din /repo
+      #   --redact            nu afișa în loguri secretele găsite (logurile sunt publice)
+      - name: Gitleaks
+        run: >
+          docker run --rm -v "$PWD:/repo:ro"
+          ghcr.io/gitleaks/gitleaks@sha256:691af3c7c5a48b16f187ce3446d5f194838f91238f27270ed36eef6359a574d9
+          git /repo --redact --no-banner
