@@ -1,0 +1,124 @@
+# Deployment pentru serviciul api.
+#
+# Ce e: un obiect Kubernetes care spune „vreau să existe mereu N poduri
+# făcute după șablonul de mai jos". Dacă un pod dispare (nod oprit, proces
+# mort, șters de mână), Kubernetes creează altul în locul lui.
+#
+# De ce nu un Pod simplu: un Pod creat direct, odată șters, nu e refăcut
+# de nimeni; un Deployment îl recreează automat.
+#
+# Se aplică cu: kubectl apply -f deploy/k8s/api-deployment.yaml
+
+# Grupul și versiunea din API-ul Kubernetes în care e definit tipul Deployment.
+# Se află cu: kubectl api-resources | grep -i deployment
+apiVersion: apps/v1
+# Tipul obiectului.
+kind: Deployment
+metadata:
+  # Numele Deployment-ului. Podurile create de el primesc nume generate: api-<hash>-<hash>.
+  name: api
+  # Grupul logic în care stă aplicația. Trebuie să existe: kubectl create namespace rag
+  namespace: rag
+# Specificația Deployment-ului: câte poduri, cum le recunoaște, după ce șablon le face.
+spec:
+  # Câte poduri identice trebuie să existe în orice moment.
+  replicas: 2
+  # Cum își recunoaște Deployment-ul podurile: după etichetă, nu după nume.
+  selector:
+    matchLabels:
+      app: api
+  # Șablonul după care se creează fiecare pod. Ce e sub „template" e un pod obișnuit.
+  template:
+    metadata:
+      # Eticheta pusă pe fiecare pod creat. Trebuie să fie identică cu cea din
+      # selector; altfel Kubernetes refuză manifestul.
+      labels:
+        app: api
+    # Specificația podului: ce containere are.
+    spec:
+      # Nu monta în pod tokenul contului de serviciu. Tokenul permite
+      # autentificarea la API server-ul Kubernetes; aplicația nu îl apelează,
+      # deci prezența lui ar fi doar un risc dacă procesul e compromis.
+      automountServiceAccountToken: false
+      containers:
+        # Numele containerului în interiorul podului.
+        - name: api
+          # Imaginea construită local și dusă în noduri cu „k3d image import".
+          # Tag-ul nu e „latest": pentru „latest" Kubernetes ar încerca mereu
+          # s-o descarce dintr-un registry și ar eșua.
+          image: rag-api:dev
+          ports:
+            # Portul pe care ascultă uvicorn (--port 8000 din Dockerfile).
+            # Declarația nu deschide portul; îi dă un nume, „http", pe care
+            # probele de mai jos îl folosesc în locul cifrei.
+            - name: http
+              containerPort: 8000
+          # Liveness: „procesul mai răspunde?". Dacă proba eșuează de
+          # failureThreshold ori la rând, kubelet-ul repornește containerul.
+          livenessProbe:
+            # Felul verificării: o cerere HTTP GET. Reușită = cod 200–399.
+            httpGet:
+              path: /healthz
+              port: http
+            # Câte secunde așteaptă kubelet-ul de la pornirea containerului până
+            # la prima verificare. Uvicorn deschide portul în aproximativ o
+            # secundă; fără această așteptare, prima probă ar eșua la fiecare pornire.
+            initialDelaySeconds: 10
+            # La câte secunde se repetă verificarea.
+            periodSeconds: 10
+            # Câte secunde se așteaptă răspunsul înainte să fie socotit eșec.
+            timeoutSeconds: 2
+            # Câte eșecuri la rând duc la repornire (aici: 30 de secunde).
+            failureThreshold: 3
+          # Readiness: „poate primi cereri?". Cât timp proba eșuează, podul e
+          # scos din lista Service-ului și nu primește trafic, dar nu e repornit.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            # Aceeași așteptare inițială ca la liveness, din același motiv.
+            # Un pod nou începe să primească cereri abia după acest interval.
+            initialDelaySeconds: 10
+            # Mai des decât liveness: un pod care nu poate servi trebuie scos repede.
+            periodSeconds: 5
+            timeoutSeconds: 2
+            # Câte eșecuri la rând îl scot din Service (aici: 15 secunde).
+            failureThreshold: 3
+          # Reguli de securitate impuse de Kubernetes acestui container,
+          # indiferent de ce prevede imaginea. Dacă imaginea le încalcă,
+          # containerul nu pornește.
+          securityContext:
+            # Refuză pornirea dacă procesul ar rula ca root (UID 0).
+            runAsNonRoot: true
+            # Utilizatorul sub care rulează procesul; același UID ca în Dockerfile.
+            runAsUser: 10001
+            # Sistemul de fișiere al containerului e doar pentru citire: un proces
+            # compromis nu poate scrie programe pe disc și nu poate modifica codul.
+            readOnlyRootFilesystem: true
+            # Procesul nu poate obține mai multe drepturi decât are la pornire.
+            allowPrivilegeEscalation: false
+            # Scoate toate capabilitățile Linux (bucăți din puterile lui root);
+            # aplicația nu are nevoie de niciuna, portul 8000 fiind peste 1024.
+            capabilities:
+              drop: ["ALL"]
+            # Filtrul standard de apeluri de sistem: blochează apelurile către
+            # nucleu de care o aplicație obișnuită nu are nevoie.
+            seccompProfile:
+              type: RuntimeDefault
+          # Cât procesor și câtă memorie primește containerul.
+          resources:
+            # Garantat: schedulerul pune podul doar pe un nod care are atât liber.
+            requests:
+              # 50 de miimi de nucleu. Serviciul mai mult așteaptă răspunsuri
+              # decât calculează, deci în repaus consumă mult sub această valoare.
+              cpu: 50m
+              # Peste consumul din repaus, cu loc pentru cereri simultane.
+              memory: 64Mi
+            # Plafon: cât are voie cel mult.
+            limits:
+              # La depășire, containerul e încetinit, nu oprit.
+              cpu: 500m
+              # La depășire, containerul e oprit de nucleu (OOMKilled) și repornit.
+              # Limitează efectul unei scurgeri de memorie sau al unui atac
+              # care urmărește consumul resurselor nodului.
+              memory: 256Mi

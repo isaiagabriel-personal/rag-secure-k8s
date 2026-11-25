@@ -1,19 +1,36 @@
+# Fișierul proiectului Python pentru serviciul api.
+# Îl citește uv: de aici află ce versiune de Python și ce biblioteci trebuie.
+# Versiunile exacte instalate sunt înghețate în uv.lock (generat, nu se editează).
+
 [project]
 name = "rag-api"
 version = "0.1.0"
 requires-python = ">=3.12"
+# Biblioteci necesare la rulare; ajung în imaginea Docker. Adăugate cu: uv add <nume>
 dependencies = [
+    # Framework-ul web: definește rutele și validează datele.
     "fastapi>=0.163.1",
+    # Publică metricile HTTP pe /metrics pentru Prometheus.
     "prometheus-fastapi-instrumentator>=8.1.0",
+    # Serverul care ascultă pe port și rulează aplicația FastAPI.
+    # Fără extra [standard]: pachetele opționale (reload, websockets, uvloop)
+    # nu sunt folosite, iar fără ele imaginea are mai puține dependențe.
     "uvicorn>=0.54.0",
 ]
 
+# Biblioteci doar pentru dezvoltare; NU ajung în imagine (uv sync --no-dev).
+# Adăugate cu: uv add --dev <nume>
 [dependency-groups]
 dev = [
+    # Cerut de TestClient-ul din FastAPI.
     "httpx2>=2.16.2",
+    # Rulează testele.
     "pytest>=9.2.0",
+    # Linter și formatter.
     "ruff>=0.17.6",
 ]
 
+# Setări pentru pytest: adaugă services/api în calea de import,
+# ca testele să poată scrie „from app.main import app".
 [tool.pytest.ini_options]
 pythonpath = ["."]

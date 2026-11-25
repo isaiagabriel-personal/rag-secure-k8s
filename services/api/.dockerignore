@@ -1,5 +1,12 @@
+# Fișiere din services/api care NU se trimit lui Docker la build,
+# deci nu pot ajunge în imagine.
+
+# Mediul virtual de pe laptop (macOS); imaginea își instalează propriul .venv.
 .venv
+# Cache-uri ale uneltelor de dezvoltare.
 .pytest_cache
 .ruff_cache
+# Cod Python compilat pe laptop.
 **/__pycache__
+# Testele rulează pe laptop și în CI, nu în imaginea de producție.
 tests

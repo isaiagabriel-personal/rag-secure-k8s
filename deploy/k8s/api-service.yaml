@@ -1,0 +1,32 @@
+# Service pentru serviciul api.
+#
+# Ce e: o adresă stabilă (nume DNS + IP fix) în fața podurilor api.
+# IP-urile podurilor se schimbă la fiecare recreare; Service-ul rămâne același
+# și împarte cererile între podurile care merg.
+#
+# Celelalte poduri din cluster ajung la api prin:
+#   http://api:8000                 din același namespace
+#   http://api.rag.svc.cluster.local:8000   din orice namespace
+#
+# Se aplică cu: kubectl apply -f deploy/k8s/api-service.yaml
+
+# Service face parte din grupul de bază al API-ului Kubernetes.
+apiVersion: v1
+kind: Service
+metadata:
+  # Numele Service-ului devine numele DNS sub care e găsit în cluster.
+  name: api
+  namespace: rag
+spec:
+  # ClusterIP: accesibil doar din interiorul clusterului, nu din afară.
+  type: ClusterIP
+  # Către ce poduri trimite: cele cu această etichetă (pusă de Deployment).
+  selector:
+    app: api
+  ports:
+      # Portul Service-ului, pe care îl folosesc clienții (http://api:8000).
+      # Se alege independent de portul podului; aici au aceeași valoare
+      # doar ca să existe un singur număr de urmărit.
+    - port: 8000
+      # Portul din pod către care e trimisă cererea: cel pe care ascultă uvicorn.
+      targetPort: 8000
