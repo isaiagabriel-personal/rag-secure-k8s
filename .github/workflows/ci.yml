@@ -1,0 +1,56 @@
+# Pipeline-ul de integrare continuă (CI).
+#
+# La fiecare push pe main și la fiecare pull request, GitHub pornește o mașină
+# virtuală curată (runner), descarcă repo-ul și rulează verificările de mai jos.
+# Dacă un pas eșuează, rularea e marcată ca eșuată lângă commit.
+
+# Numele afișat în pagina „Actions" a repo-ului.
+name: ci
+
+# Când pornește pipeline-ul.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Drepturile tokenului pe care GitHub îl dă automat fiecărei rulări.
+# Implicit ar fi mai largi; aici sunt reduse la citirea codului.
+permissions:
+  contents: read
+
+jobs:
+  # Verificările serviciului api: lint, formatare, teste.
+  api:
+    # Sistemul de operare al runner-ului.
+    runs-on: ubuntu-24.04
+    # Folderul în care rulează comenzile „run" ale acestui job.
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      # Descarcă repo-ul pe runner. Fără acest pas, runner-ul nu are codul.
+      # Acțiunile externe sunt fixate pe un commit (SHA), nu pe o etichetă:
+      # o etichetă poate fi mutată de autorul acțiunii pe alt cod, un SHA nu.
+      - name: Descarca repo-ul
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Instalează uv pe runner.
+      - name: Instaleaza uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+      # Instalează Python și bibliotecile, exact în versiunile din uv.lock.
+      # --frozen: eșuează dacă uv.lock nu corespunde cu pyproject.toml,
+      # în loc să-l refacă pe loc.
+      - name: Instaleaza dependentele
+        run: uv sync --frozen
+
+      # Lint: erori și cod suspect.
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      # Formatare: --check doar verifică, nu modifică fișierele.
+      - name: Ruff (format)
+        run: uv run ruff format --check .
+
+      - name: Teste
+        run: uv run pytest
