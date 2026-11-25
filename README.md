@@ -12,9 +12,9 @@ servicii AI externe.
 | Componentă | Stare |
 | --- | --- |
 | `services/api` | serviciu FastAPI cu rutele de infrastructură (`/healthz`, `/readyz`, `/metrics`), teste, imagine Docker |
-| `deploy/k8s` | manifeste Kubernetes pentru `api`: Deployment (probe, reguli de securitate, resurse) și Service |
+| `deploy/helm/rag` | chart Helm cu șabloanele pentru `api`: Deployment (probe, reguli de securitate, resurse) și Service |
 | `services/worker`, `services/web` | neimplementate |
-| `deploy/helm/rag`, `infra/terraform` | neimplementate |
+| `infra/terraform` | neimplementat |
 | `docs/uml` | diagramele UML ale sistemului (PlantUML) |
 
 ## Structura
@@ -28,8 +28,10 @@ services/
   worker/         procesarea documentelor în fundal
   web/            interfața
 deploy/
-  k8s/            manifeste Kubernetes scrise de mână
   helm/rag/       chart Helm
+    Chart.yaml    descrierea chart-ului
+    values.yaml   valorile implicite
+    templates/    șabloanele manifestelor Kubernetes
 infra/terraform/  infrastructura din Azure
 tests/            teste la nivel de sistem (atacuri, evaluare)
 docs/             diagrame și decizii de arhitectură
@@ -60,7 +62,7 @@ funcționează cu sistemul de fișiere doar pentru citire.
 
 ## `api` într-un cluster local (k3d)
 
-Necesită [k3d](https://k3d.io) și `kubectl`.
+Necesită [k3d](https://k3d.io), `kubectl` și [Helm](https://helm.sh).
 
 ```
 # Cluster cu un nod server și doi agenți. Traefik-ul livrat cu k3s e dezactivat;
@@ -71,8 +73,19 @@ k3d cluster create licenta --agents 2 --k3s-arg "--disable=traefik@server:0" --a
 k3d image import rag-api:dev -c licenta
 
 kubectl create namespace rag
-kubectl apply -f deploy/k8s/
+
+# Instalează chart-ul ca release-ul „rag" (sau îl actualizează, dacă există).
+helm upgrade --install rag deploy/helm/rag -n rag
 kubectl rollout status deployment/api -n rag
+```
+
+Comenzi utile pentru chart:
+
+```
+helm lint deploy/helm/rag                  # verifică chart-ul
+helm template rag deploy/helm/rag -n rag   # afișează manifestele generate, fără să le trimită
+helm history rag -n rag                    # reviziile instalării
+helm rollback rag <revizie> -n rag         # revine la o revizie anterioară
 ```
 
 Verificare, printr-un tunel temporar de pe laptop până la Service:
@@ -82,7 +95,7 @@ kubectl port-forward service/api 8000:8000 -n rag
 curl http://127.0.0.1:8000/healthz
 ```
 
-Ce impun manifestele containerului `api`:
+Ce impune chart-ul containerului `api`:
 
 - rulează ca utilizator neprivilegiat, cu sistem de fișiere doar pentru citire;
 - fără capabilități Linux, fără escaladare de privilegii, cu filtrul seccomp implicit;

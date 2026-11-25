@@ -8,7 +8,7 @@
 #   http://api:8000                 din același namespace
 #   http://api.rag.svc.cluster.local:8000   din orice namespace
 #
-# Se aplică cu: kubectl apply -f deploy/k8s/api-service.yaml
+# Face parte din chart-ul Helm „rag"; se instalează odată cu el.
 
 # Service face parte din grupul de bază al API-ului Kubernetes.
 apiVersion: v1
@@ -16,7 +16,8 @@ kind: Service
 metadata:
   # Numele Service-ului devine numele DNS sub care e găsit în cluster.
   name: api
-  namespace: rag
+  # Namespace-ul în care e instalat chart-ul (cel dat cu -n la helm install).
+  namespace: {{ .Release.Namespace }}
 spec:
   # ClusterIP: accesibil doar din interiorul clusterului, nu din afară.
   type: ClusterIP

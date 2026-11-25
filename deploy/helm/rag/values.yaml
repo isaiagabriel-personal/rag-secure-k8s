@@ -1,0 +1,16 @@
+# Valorile implicite ale chart-ului „rag".
+#
+# Șabloanele din templates/ au locuri libere, iar valorile vin de aici.
+# Un fișier de valori dat la instalare (helm install -f <fișier>) le poate
+# înlocui pe oricare dintre ele; ce nu e înlocuit rămâne ca aici.
+
+# Setările serviciului api.
+api:
+  # Câte poduri identice rulează.
+  replicas: 2
+  image:
+    # Numele imaginii, fără tag. Poate conține și adresa registry-ului.
+    repository: rag-api
+    # Versiunea imaginii. Nu se folosește „latest": Kubernetes ar încerca
+    # mereu s-o descarce dintr-un registry.
+    tag: dev

@@ -7,7 +7,7 @@
 # De ce nu un Pod simplu: un Pod creat direct, odată șters, nu e refăcut
 # de nimeni; un Deployment îl recreează automat.
 #
-# Se aplică cu: kubectl apply -f deploy/k8s/api-deployment.yaml
+# Face parte din chart-ul Helm „rag"; se instalează odată cu el.
 
 # Grupul și versiunea din API-ul Kubernetes în care e definit tipul Deployment.
 # Se află cu: kubectl api-resources | grep -i deployment
@@ -17,12 +17,12 @@ kind: Deployment
 metadata:
   # Numele Deployment-ului. Podurile create de el primesc nume generate: api-<hash>-<hash>.
   name: api
-  # Grupul logic în care stă aplicația. Trebuie să existe: kubectl create namespace rag
-  namespace: rag
+  # Namespace-ul în care e instalat chart-ul (cel dat cu -n la helm install).
+  namespace: {{ .Release.Namespace }}
 # Specificația Deployment-ului: câte poduri, cum le recunoaște, după ce șablon le face.
 spec:
-  # Câte poduri identice trebuie să existe în orice moment.
-  replicas: 2
+  # Câte poduri identice trebuie să existe în orice moment (api.replicas din valori).
+  replicas: {{ .Values.api.replicas }}
   # Cum își recunoaște Deployment-ul podurile: după etichetă, nu după nume.
   selector:
     matchLabels:
@@ -43,10 +43,8 @@ spec:
       containers:
         # Numele containerului în interiorul podului.
         - name: api
-          # Imaginea construită local și dusă în noduri cu „k3d image import".
-          # Tag-ul nu e „latest": pentru „latest" Kubernetes ar încerca mereu
-          # s-o descarce dintr-un registry și ar eșua.
-          image: rag-api:dev
+          # Imaginea containerului: nume și tag, din api.image din valori.
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
           ports:
             # Portul pe care ascultă uvicorn (--port 8000 din Dockerfile).
             # Declarația nu deschide portul; îi dă un nume, „http", pe care

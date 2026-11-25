@@ -1,0 +1,19 @@
+# Descrierea chart-ului Helm „rag".
+#
+# Un chart e un pachet de manifeste Kubernetes: șabloanele din templates/
+# plus valorile cu care sunt completate. Acest fișier îl identifică;
+# fără el, Helm nu recunoaște folderul drept chart.
+
+# Versiunea formatului de chart (nu a aplicației). v2 e formatul curent.
+apiVersion: v2
+# Numele chart-ului.
+name: rag
+description: Asistent documentar RAG pe Kubernetes
+# „application": chart care instalează ceva în cluster. Celălalt tip,
+# „library", conține doar bucăți refolosite de alte charturi.
+type: application
+# Versiunea chart-ului, adică a pachetului de manifeste. Crește când se
+# schimbă șabloanele.
+version: 0.1.0
+# Versiunea aplicației împachetate. Informativă; apare în „helm list".
+appVersion: "0.1.0"
