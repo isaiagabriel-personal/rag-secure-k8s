@@ -1,5 +1,23 @@
+# Verificări rulate automat înaintea fiecărui commit, de unealta pre-commit.
+# Dacă una eșuează, commit-ul e anulat.
+#
+# Activare, o singură dată după clonarea repo-ului: pre-commit install
+# Rulare de mână pe toate fișierele: pre-commit run --all-files
+
 repos:
+  # Caută parole, chei și tokenuri în fișierele pregătite pentru commit.
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
     hooks:
       - id: gitleaks
+
+  # Ruff pentru codul Python. Versiunea e aceeași ca în services/api/pyproject.toml,
+  # ca verificarea de la commit să dea același rezultat ca cea din pipeline.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.6
+    hooks:
+      # Lint: erori și cod suspect.
+      - id: ruff-check
+      # Formatare: rescrie fișierele neformatate și oprește commit-ul,
+      # ca modificările să poată fi verificate și adăugate din nou.
+      - id: ruff-format

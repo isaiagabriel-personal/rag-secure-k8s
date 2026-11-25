@@ -34,3 +34,10 @@ dev = [
 # ca testele să poată scrie „from app.main import app".
 [tool.pytest.ini_options]
 pythonpath = ["."]
+# Setări pentru ruff.
+[tool.ruff]
+# Unde se află codul proiectului, relativ la acest fișier. Ruff folosește
+# asta ca să deosebească importurile proprii (app) de bibliotecile externe;
+# fără această setare ar ghici după folderul din care e rulat și ar da
+# rezultate diferite din rădăcina repo-ului față de services/api.
+src = ["."]
