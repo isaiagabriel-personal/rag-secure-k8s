@@ -9,7 +9,7 @@ requires-python = ">=3.12"
 # Biblioteci necesare la rulare; ajung în imaginea Docker. Adăugate cu: uv add <nume>
 dependencies = [
     # Framework-ul web: definește rutele și validează datele.
-    "fastapi>=0.163.1",
+    "fastapi>=0.165.0",
     # Publică metricile HTTP pe /metrics pentru Prometheus.
     "prometheus-fastapi-instrumentator>=8.1.0",
     # Serverul care ascultă pe port și rulează aplicația FastAPI.
