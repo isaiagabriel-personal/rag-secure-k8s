@@ -26,8 +26,8 @@ package "Servicii gestionate (Azure)" {
 }
 
 package "Livrare" {
-  [GitHub Actions\nCI: Trivy, gitleaks\nCD: Helm] as GHA
-  [ghcr.io\n(imagini după digest)] as REG
+  [GitHub Actions\nCI: ruff, teste, gitleaks, Trivy\nCD: Helm] as GHA
+  [ghcr.io\n(imagini după digest,\namd64 + arm64)] as REG
 }
 
 U --> ING : HTTPS

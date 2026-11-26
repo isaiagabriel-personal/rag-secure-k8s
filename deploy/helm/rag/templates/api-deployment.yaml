@@ -44,7 +44,8 @@ spec:
         # Numele containerului în interiorul podului.
         - name: api
           # Imaginea containerului: nume și tag, din api.image din valori.
-          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          # Tag-ul e obligatoriu: fără el, Helm se oprește cu mesajul de mai jos.
+          image: '{{ .Values.api.image.repository }}:{{ required "api.image.tag lipseste; se da cu --set api.image.tag=<sha>" .Values.api.image.tag }}'
           ports:
             # Portul pe care ascultă uvicorn (--port 8000 din Dockerfile).
             # Declarația nu deschide portul; îi dă un nume, „http", pe care

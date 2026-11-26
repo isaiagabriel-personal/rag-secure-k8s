@@ -29,12 +29,12 @@ cloud "Microsoft Azure (West Europe)" as AZ {
 
 cloud "GitHub" as GH {
   node "GitHub Actions" as GHA
-  node "ghcr.io" as REG
+  node "ghcr.io\n(aceeași imagine, două variante:\nlinux/amd64 și linux/arm64)" as REG
 }
 
 node "Laptop de dezvoltare (macOS)" as DEV {
   node "k3d (k3s în Docker)" as K3D {
-    node "aceleași poduri,\nvalues-local.yaml" as PL
+    node "aceleași poduri, aceeași imagine\n(varianta linux/arm64),\nacelași chart Helm" as PL
     database "pgvector/pgvector" as PGL
     node "Azurite + emulator Service Bus" as EMU
   }
@@ -56,8 +56,9 @@ PIDX --> SB
 PIDX --> PG
 PAPI ..> KV : prin CSI
 MI ..> PAPI : identitate fără parolă
-GHA --> REG : build + push
+GHA --> REG : build (amd64 + arm64) + push
 GHA ..> NP1 : helm upgrade (OIDC)
-REG ..> NP1 : pull imagini (digest)
+REG ..> NP1 : pull imagini (digest, amd64)
+REG ..> PL : pull imagini (arm64)
 PL ..> OLL : LLM_URL
 @enduml
