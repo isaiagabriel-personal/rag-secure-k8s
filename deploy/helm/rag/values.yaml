@@ -16,3 +16,12 @@ api:
     # Nu are valoare implicită; se dă la instalare cu
     # --set api.image.tag=<sha>, altfel instalarea se oprește cu eroare.
     tag: ""
+    
+# Punctul de intrare în cluster la care se leagă rutele aplicației: obiectul
+# Gateway creat la instalarea proxy-ului invers (Traefik).
+gateway:
+  # Numele obiectului Gateway.
+  name: traefik-gateway
+  # Namespace-ul în care se află. Gateway-ul trebuie să accepte rute din
+  # namespace-ul aplicației; altfel ruta e ignorată.
+  namespace: traefik

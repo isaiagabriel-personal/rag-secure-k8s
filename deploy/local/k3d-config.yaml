@@ -1,0 +1,48 @@
+# Descrierea clusterului local, pentru k3d.
+#
+# k3d pornește un cluster Kubernetes (k3s) în care fiecare nod este un
+# container Docker. Fișierul înlocuiește opțiunile date în linia de comandă,
+# ca același cluster să poată fi refăcut oricând, pe orice calculator.
+#
+# Creare:   k3d cluster create --config deploy/local/k3d-config.yaml
+# Ștergere: k3d cluster delete licenta
+
+# Versiunea formatului acestui fișier, stabilită de k3d.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+
+metadata:
+  # Numele clusterului. Containerele-nod se vor numi k3d-licenta-...
+  name: licenta
+
+# Un nod server: rulează planul de control (API server, scheduler) și poduri.
+servers: 1
+# Două noduri agent: rulează doar poduri.
+agents: 2
+
+# Imaginea din care pornesc nodurile, adică versiunea de Kubernetes.
+# Fixată, ca un cluster refăcut mai târziu să aibă aceeași versiune.
+image: rancher/k3s:v1.36.4-k3s1
+
+# Unde e publicat API server-ul pe calculatorul gazdă.
+kubeAPI:
+  # Doar pe adresa locală: clusterul nu e accesibil din rețea.
+  hostIP: "127.0.0.1"
+  # Port ales pentru acest proiect; în cluster, API server-ul ascultă pe 6443.
+  hostPort: "6550"
+
+ports:
+  # Intrarea HTTP în cluster: portul 8080 al calculatorului gazdă duce, prin
+  # nodul proxy, la portul 80 al nodurilor, unde ascultă proxy-ul invers.
+  - port: 127.0.0.1:8080:80
+    nodeFilters:
+      - loadbalancer
+
+options:
+  k3s:
+    extraArgs:
+      # k3s vine cu propriul Traefik. Se dezactivează, ca Traefik să fie
+      # instalat separat, cu versiune și setări alese explicit.
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*

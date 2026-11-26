@@ -1,0 +1,32 @@
+# Regula de rutare pentru api, în standardul Gateway API.
+#
+# Un HTTPRoute spune proxy-ului invers de la intrarea în cluster ce cereri să
+# trimită cărui Service. Singur nu face nimic: se leagă de un Gateway (punctul
+# de intrare), iar programul care aplică regula este cel din spatele acelui
+# Gateway.
+#
+# Din exterior se ajunge la api doar pe căile care încep cu /api. Rutele de
+# infrastructură (/healthz, /readyz, /metrics) nu au nicio regulă, deci nu
+# sunt accesibile din afara clusterului.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api
+  namespace: {{ .Release.Namespace }}
+spec:
+  # Gateway-ul de care se leagă ruta. Se află în alt namespace decât ruta,
+  # deci namespace-ul lui trebuie scris explicit.
+  parentRefs:
+    - name: {{ .Values.gateway.name }}
+      namespace: {{ .Values.gateway.namespace }}
+  rules:
+    # PathPrefix compară pe segmente de cale: se potrivesc /api și /api/v1/ask,
+    # dar nu și /apix.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      # Destinația: Service-ul api, pe portul lui. Calea e trimisă neschimbată.
+      backendRefs:
+        - name: api
+          port: 8000

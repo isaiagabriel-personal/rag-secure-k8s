@@ -1,0 +1,63 @@
+# Valorile pentru chart-ul traefik/traefik: proxy-ul invers de la intrarea în
+# cluster. Traefik primește traficul HTTP din exterior și îl trimite
+# serviciilor, după reguli scrise ca obiecte Gateway API (Gateway, HTTPRoute).
+#
+# Aici sunt doar valorile care diferă de cele implicite ale chart-ului.
+# Lista completă: helm show values traefik/traefik --version 43.0.0
+#
+# Instalare:
+#   helm upgrade --install traefik traefik/traefik --version 43.0.0 \
+#     -n traefik --create-namespace -f deploy/platform/traefik-values.yaml
+
+# Sursele din care Traefik își citește regulile de rutare.
+providers:
+  # Obiectele standardului Gateway API. Sursa folosită de aplicație.
+  kubernetesGateway:
+    enabled: true
+  # Obiectele Ingress, standardul mai vechi. Nefolosit; oprit ca Traefik să
+  # nu urmărească un tip de obiect prin care nu trebuie să vină reguli.
+  kubernetesIngress:
+    enabled: false
+
+# Tot de standardul Ingress ține și obiectul IngressClass; nu se creează.
+ingressClass:
+  enabled: false
+
+# Obiectul Gateway creat de chart: punctul de intrare la care se leagă rutele.
+gateway:
+  listeners:
+    web:
+      # Portul pe care ascultă containerul Traefik. Din exterior se ajunge la
+      # el prin portul 80 al Service-ului.
+      port: 8000
+      protocol: HTTP
+      # Din ce namespace-uri se pot lega rute la acest Gateway. Implicit, doar
+      # din namespace-ul lui. Aici: doar din namespace-ul aplicației, ales
+      # după eticheta pe care Kubernetes o pune automat pe orice namespace.
+      namespacePolicy:
+        from: Selector
+        selector:
+          matchLabels:
+            kubernetes.io/metadata.name: rag
+
+# Interfața web de administrare a lui Traefik. Oprită: nu e folosită, iar
+# fiecare interfață în plus e încă un lucru de protejat.
+api:
+  dashboard: false
+
+global:
+  # Traefik întreabă periodic serverele autorilor dacă există o versiune nouă.
+  # Oprit: podul nu are de ce să deschidă conexiuni spre internet, iar
+  # versiunile sunt urmărite din repo.
+  checkNewVersion: false
+  # Statistici anonime de folosire trimise autorilor. Oprit.
+  sendAnonymousUsage: false
+
+# Resurse garantate (requests) și plafon (limits) pentru containerul Traefik.
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
