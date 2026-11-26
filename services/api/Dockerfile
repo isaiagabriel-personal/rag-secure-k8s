@@ -7,10 +7,13 @@
 # Construire: docker build -t rag-api:dev .   (din services/api)
 
 # --- Etapa 1: builder. Instalează bibliotecile. Nu ajunge în imaginea finală. ---
-# Imagine de bază: Debian minimal cu Python 3.12.
-FROM python:3.12-slim AS builder
+# Imagine de bază: Debian minimal cu Python 3.12. Digest-ul (sha256) fixează
+# conținutul exact: tag-ul poate fi mutat de autori pe altă imagine, digest-ul nu.
+# Când sunt date amândouă, Docker folosește digest-ul; tag-ul e doar informativ.
+FROM python:3.12-slim@sha256:191083cdf6c7bda8c76158983163ead5d5cf7b77cf3033e805bb0f5296f51b4b AS builder
 # Ia programul uv din imaginea lui oficială, în loc să-l instaleze cu pip.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Versiune și digest fixe, din același motiv ca la imaginea de bază.
+COPY --from=ghcr.io/astral-sh/uv:0.13.10@sha256:a3ea1357342c1a4bf9a0c53a3deb1b55379aefa037338d8113d5771efa01774f /uv /usr/local/bin/uv
 # Folderul de lucru din imagine; comenzile următoare rulează aici.
 WORKDIR /app
 # Se copiază doar lista de biblioteci, nu și codul: cât timp aceste două
@@ -21,7 +24,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # --- Etapa 2: imaginea finală. Doar Python, biblioteci și cod. ---
-FROM python:3.12-slim
+# Aceeași imagine de bază ca în etapa 1; digest-ul trebuie să fie identic.
+FROM python:3.12-slim@sha256:191083cdf6c7bda8c76158983163ead5d5cf7b77cf3033e805bb0f5296f51b4b
 # Utilizator fără drepturi de administrator. UID numeric fix (10001), fără
 # folder personal și fără shell: dacă procesul e compromis, poate face puțin.
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app

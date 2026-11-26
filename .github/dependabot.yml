@@ -1,0 +1,37 @@
+# Configurarea Dependabot, serviciul GitHub care propune actualizări de versiuni.
+#
+# Proiectul fixează exact versiunile pe care le folosește: acțiunile GitHub
+# după SHA-ul commit-ului, imaginile Docker după digest, bibliotecile Python
+# în uv.lock. Fixarea oprește schimbările nevăzute, dar oprește și reparațiile
+# de securitate. Dependabot verifică periodic dacă au apărut versiuni noi și
+# deschide câte un pull request cu modificarea; pipeline-ul rulează pe el, iar
+# intrarea în main rămâne o decizie manuală.
+#
+# Fișierul e citit de GitHub direct din ramura main; nu se rulează nimic local.
+
+# Versiunea formatului acestui fișier (singura acceptată este 2).
+version: 2
+
+updates:
+  # Acțiunile folosite în .github/workflows (liniile „uses:").
+  # Dependabot actualizează SHA-ul și comentariul cu versiunea de lângă el.
+  - package-ecosystem: github-actions
+    # Pentru acțiuni, „/" înseamnă folderul .github/workflows.
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Imaginile din Dockerfile (liniile FROM și COPY --from).
+  # Actualizează împreună tag-ul și digest-ul.
+  - package-ecosystem: docker
+    # Folderul în care se află Dockerfile-ul.
+    directory: /services/api
+    schedule:
+      interval: weekly
+
+  # Bibliotecile Python: pyproject.toml și uv.lock.
+  - package-ecosystem: uv
+    # Folderul în care se află pyproject.toml și uv.lock.
+    directory: /services/api
+    schedule:
+      interval: weekly
