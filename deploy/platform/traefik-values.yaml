@@ -18,6 +18,11 @@ providers:
   # nu urmărească un tip de obiect prin care nu trebuie să vină reguli.
   kubernetesIngress:
     enabled: false
+  # Obiectele din tipurile proprii Traefik (de exemplu Middleware).
+  kubernetesCRD:
+    # Numele interne generate pentru reguli sunt construite astfel încât două
+    # reguli din namespace-uri diferite să nu poată primi același nume.
+    safeNaming: true
 
 # Tot de standardul Ingress ține și obiectul IngressClass; nu se creează.
 ingressClass:
@@ -52,6 +57,11 @@ global:
   checkNewVersion: false
   # Statistici anonime de folosire trimise autorilor. Oprit.
   sendAnonymousUsage: false
+  # Antetele al căror nume diferă de al altui antet doar prin „_" sau „." în
+  # loc de „-" (de exemplu X_Forwarded_For) sunt șterse din cerere. Unele
+  # servere le citesc drept antetul original, ceea ce i-ar permite unui client
+  # să falsifice antetele puse de proxy.
+  aliasHeadersStrategy: delete
 
 # Resurse garantate (requests) și plafon (limits) pentru containerul Traefik.
 resources:
@@ -61,3 +71,34 @@ resources:
   limits:
     cpu: 500m
     memory: 256Mi
+
+
+# Punctele de intrare: porturile pe care Traefik primește trafic.
+# Pe ambele sunt respinse cererile a căror cale conține caractere rezervate
+# scrise codat (de exemplu %2F pentru „/"). Traefik compară calea fără s-o
+# decodeze, iar serverul din spate o decodează; o asemenea cale ar însemna un
+# lucru pentru regula de rutare și altul pentru aplicație. Verificarea
+# privește doar calea, nu și parametrii de după „?".
+ports:
+  # HTTP.
+  web:
+    http:
+      encodedCharacters:
+        allowEncodedSlash: false
+        allowEncodedBackSlash: false
+        allowEncodedNullCharacter: false
+        allowEncodedSemicolon: false
+        allowEncodedPercent: false
+        allowEncodedQuestionMark: false
+        allowEncodedHash: false
+  # HTTPS.
+  websecure:
+    http:
+      encodedCharacters:
+        allowEncodedSlash: false
+        allowEncodedBackSlash: false
+        allowEncodedNullCharacter: false
+        allowEncodedSemicolon: false
+        allowEncodedPercent: false
+        allowEncodedQuestionMark: false
+        allowEncodedHash: false
