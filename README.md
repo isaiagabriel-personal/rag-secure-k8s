@@ -14,6 +14,7 @@ servicii AI externe.
 | `services/api` | serviciu FastAPI cu rutele de infrastructură (`/healthz`, `/readyz`, `/metrics`), teste, imagine Docker |
 | `deploy/helm/rag` | chart Helm cu șabloanele pentru `api`: Deployment (probe, reguli de securitate, resurse) și Service |
 | `.github/workflows/ci.yml` | pipeline: ruff și teste, gitleaks pe tot istoricul, scanare Trivy, apoi publicarea imaginii `api` în ghcr.io (`linux/amd64` și `linux/arm64`), cu SHA-ul commit-ului ca tag |
+| `.github/dependabot.yml` | Dependabot propune săptămânal actualizări pentru acțiunile GitHub, imaginile din Dockerfile, bibliotecile Python și verificările pre-commit |
 | `services/worker`, `services/web` | neimplementate |
 | `infra/terraform` | neimplementat |
 | `docs/uml` | diagramele UML ale sistemului (PlantUML) |

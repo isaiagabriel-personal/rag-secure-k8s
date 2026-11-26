@@ -35,3 +35,10 @@ updates:
     directory: /services/api
     schedule:
       interval: weekly
+
+  # Verificările rulate la commit (.pre-commit-config.yaml, câmpul „rev").
+  - package-ecosystem: pre-commit
+    # Folderul în care se află .pre-commit-config.yaml: rădăcina repo-ului.
+    directory: /
+    schedule:
+      interval: weekly
