@@ -83,6 +83,16 @@ spec:
             timeoutSeconds: 2
             # Câte eșecuri la rând îl scot din Service (aici: 15 secunde).
             failureThreshold: 3
+          # Ce se întâmplă la oprirea podului, înainte ca procesul să primească
+          # semnalul de oprire. Scoaterea podului din Service și oprirea lui
+          # pornesc în același timp, iar vestea ajunge la cei care trimit trafic
+          # cu o mică întârziere. În aceste secunde podul răspunde în continuare,
+          # ca cererile deja pornite spre el să nu găsească un proces închis.
+          lifecycle:
+            preStop:
+              # Așteptarea e făcută de kubelet; în container nu rulează nimic.
+              sleep:
+                seconds: 5
           # Reguli de securitate impuse de Kubernetes acestui container,
           # indiferent de ce prevede imaginea. Dacă imaginea le încalcă,
           # containerul nu pornește.
