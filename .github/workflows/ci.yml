@@ -78,3 +78,63 @@ jobs:
           docker run --rm -v "$PWD:/repo:ro"
           ghcr.io/gitleaks/gitleaks@sha256:691af3c7c5a48b16f187ce3446d5f194838f91238f27270ed36eef6359a574d9
           git /repo --redact --no-banner
+  # Construiește imaginea serviciului api și o publică în ghcr.io.
+  # Imaginea are două variante sub același nume: linux/amd64 (noduri din cloud)
+  # și linux/arm64 (calculatoare cu procesor ARM, de exemplu Apple Silicon).
+  # Fiecare nod descarcă singur varianta potrivită procesorului lui.
+  image:
+    # Pornește doar dacă ambele joburi de verificare au trecut.
+    needs: [api, gitleaks]
+    # Publică doar la push pe main: nu la pull request și nu de pe alt branch,
+    # indiferent ce declanșatoare are pipeline-ul.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    # Drepturile tokenului acestui job. Doar aici e nevoie de publicare în
+    # registry; celelalte joburi rămân doar cu citirea codului.
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # Numele imaginii în registry, fără tag.
+      IMAGE: ghcr.io/${{ github.repository_owner }}/rag-api
+    steps:
+      - name: Descarca repo-ul
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Runner-ul are procesor amd64. Emulatorul QEMU îi permite să ruleze
+      # programe arm64, deci să construiască și varianta arm64 a imaginii.
+      # --privileged e necesar: emulatorul se înregistrează în nucleul runner-ului.
+      # Imaginea e tonistiigi/binfmt qemu-v10.2.3, cerută după digest.
+      - name: Instaleaza emulatorul pentru arm64
+        run: >
+          docker run --privileged --rm
+          tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+          --install arm64
+
+      # Builder separat, capabil să construiască pentru mai multe arhitecturi
+      # deodată și să urce rezultatul direct în registry.
+      # Imaginea e moby/buildkit v0.35.1, cerută după digest.
+      - name: Porneste builderul
+        run: >
+          docker buildx create --use --driver docker-container
+          --driver-opt image=moby/buildkit@sha256:baf6138eb8c37644800c7c913fba051e840ebb9ba13eaf92d92ef9a1712d0b4c
+
+      # Autentificare la ghcr.io cu tokenul temporar al rulării. Tokenul e dat
+      # prin variabilă de mediu și citit de pe stdin, ca să nu apară în
+      # linia de comandă și în loguri.
+      - name: Autentificare la ghcr.io
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      # Construiește ambele variante și le urcă. Tag-ul e SHA-ul commit-ului:
+      # numele imaginii spune exact din ce cod a fost construită.
+      # Eticheta „source" leagă imaginea de repo în interfața GitHub.
+      - name: Construieste si publica imaginea
+        run: >
+          docker buildx build
+          --platform linux/amd64,linux/arm64
+          --tag "$IMAGE:$GITHUB_SHA"
+          --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY"
+          --push
+          services/api
